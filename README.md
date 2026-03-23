@@ -79,6 +79,7 @@ In the extension settings:
 ## Links
 
 - [Ralkage](https://ralkage.com)
+- [Packagist](https://packagist.org/packages/ralkage/flarum-ext-cap-captcha)
 - [Cap Documentation](https://capjs.js.org/)
 - [GitHub](https://github.com/Ralkage/flarum-ext-cap-captcha)
 
