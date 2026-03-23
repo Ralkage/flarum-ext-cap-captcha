@@ -1,7 +1,5 @@
 import app from 'flarum/forum/app';
-import { extend } from 'flarum/common/extend';
-import SignUpModal from 'flarum/forum/components/SignUpModal';
-import LogInModal from 'flarum/forum/components/LogInModal';
+import { extend, override } from 'flarum/common/extend';
 
 app.initializers.add('ralkage/cap-captcha', () => {
   let capWidgetScriptLoaded = false;
@@ -47,7 +45,7 @@ app.initializers.add('ralkage/cap-captcha', () => {
 
   // --- Sign Up ---
 
-  extend(SignUpModal.prototype, 'fields', function (items) {
+  extend('flarum/forum/components/SignUpModal', 'fields', function (items) {
     if (!app.forum.attribute('ralkage-cap-captcha.protect_registration')) return;
 
     loadCapScript();
@@ -63,14 +61,13 @@ app.initializers.add('ralkage/cap-captcha', () => {
     );
   });
 
-  extend(SignUpModal.prototype, 'oncreate', function () {
+  extend('flarum/forum/components/SignUpModal', 'oncreate', function () {
     if (app.forum.attribute('ralkage-cap-captcha.protect_registration')) {
       setupSolveListener(this);
     }
   });
 
-  const originalSignUpSubmit = SignUpModal.prototype.onsubmit;
-  SignUpModal.prototype.onsubmit = function (e) {
+  override('flarum/forum/components/SignUpModal', 'onsubmit', function (original, e) {
     if (app.forum.attribute('ralkage-cap-captcha.protect_registration')) {
       if (!hasCapToken(this)) {
         e.preventDefault();
@@ -78,10 +75,10 @@ app.initializers.add('ralkage/cap-captcha', () => {
         return;
       }
     }
-    return originalSignUpSubmit.call(this, e);
-  };
+    return original(e);
+  });
 
-  extend(SignUpModal.prototype, 'submitData', function (data) {
+  extend('flarum/forum/components/SignUpModal', 'submitData', function (data) {
     if (!app.forum.attribute('ralkage-cap-captcha.protect_registration')) return data;
 
     const widget = this.$('cap-widget')[0];
@@ -93,7 +90,7 @@ app.initializers.add('ralkage/cap-captcha', () => {
 
   // --- Log In ---
 
-  extend(LogInModal.prototype, 'fields', function (items) {
+  extend('flarum/forum/components/LogInModal', 'fields', function (items) {
     if (!app.forum.attribute('ralkage-cap-captcha.protect_login')) return;
 
     loadCapScript();
@@ -109,14 +106,13 @@ app.initializers.add('ralkage/cap-captcha', () => {
     );
   });
 
-  extend(LogInModal.prototype, 'oncreate', function () {
+  extend('flarum/forum/components/LogInModal', 'oncreate', function () {
     if (app.forum.attribute('ralkage-cap-captcha.protect_login')) {
       setupSolveListener(this);
     }
   });
 
-  const originalLoginSubmit = LogInModal.prototype.onsubmit;
-  LogInModal.prototype.onsubmit = function (e) {
+  override('flarum/forum/components/LogInModal', 'onsubmit', function (original, e) {
     if (app.forum.attribute('ralkage-cap-captcha.protect_login')) {
       if (!hasCapToken(this)) {
         e.preventDefault();
@@ -127,19 +123,19 @@ app.initializers.add('ralkage/cap-captcha', () => {
       const widget = this.$('cap-widget')[0];
       const capToken = widget.getAttribute('data-cap-token') || '';
 
+      // Monkey-patch app.request to inject capToken into the login body
       const originalRequest = app.request.bind(app);
-      app.request = (options) => {
-        if (options.url && options.url.includes('/login') && options.body) {
+      app.request = function (options) {
+        if (options.body) {
           options.body.capToken = capToken;
         }
-        return originalRequest(options);
+        const result = originalRequest(options);
+        // Restore after this call
+        app.request = originalRequest;
+        return result;
       };
-
-      const result = originalLoginSubmit.call(this, e);
-      app.request = originalRequest;
-      return result;
     }
 
-    return originalLoginSubmit.call(this, e);
-  };
+    return original(e);
+  });
 });

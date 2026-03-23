@@ -34,7 +34,7 @@ class CapValidator
         $endpoint = rtrim($this->settings->get('ralkage-cap-captcha.api_endpoint'), '/');
         $secret = $this->settings->get('ralkage-cap-captcha.secret_key');
 
-        $client = new Client();
+        $client = new Client(['http_errors' => false]);
 
         try {
             $response = $client->post($endpoint . '/siteverify', [
